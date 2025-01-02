@@ -22,18 +22,25 @@ namespace AwesomeProjectionCoreUtils.Extensions
         }
         
         /// <summary>
-        /// Converts the input string to camel case (first character lowercase and removes spaces).
+        /// Converts the input string to camel case (first character lowercase and removes specified delimiters).
         /// </summary>
         /// <param name="input">The input string</param>
-        /// <returns>The input string in camel case with spaces removed</returns>
+        /// <param name="delimiters">The delimiters used to split the input string. Default is a space (' ').</param>
+        /// <returns>The input string in camel case with specified delimiters removed</returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public static string ToCamelCase(this string input)
+        public static string ToCamelCase(this string input, char[] delimiters = null)
         {
             if (input == null) throw new ArgumentNullException(nameof(input));
             if (string.IsNullOrWhiteSpace(input)) return "";
 
-            // Split the string by spaces, capitalize each word, and combine them
-            var words = input.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            // Use default delimiters if none are provided
+            if (delimiters == null || delimiters.Length == 0)
+            {
+                delimiters = new[] { ' ' };
+            }
+
+            // Split the string by the specified delimiters, capitalize each word, and combine them
+            var words = input.Split(delimiters, StringSplitOptions.RemoveEmptyEntries);
             for (int i = 0; i < words.Length; i++)
             {
                 words[i] = words[i].FirstCharToUpper();
@@ -41,8 +48,8 @@ namespace AwesomeProjectionCoreUtils.Extensions
 
             // Join words and ensure the first character is lowercase
             var camelCase = string.Join("", words);
-            return camelCase.Length > 0 
-                ? camelCase[0].ToString().ToLower(CultureInfo.InvariantCulture) + camelCase.Substring(1) 
+            return camelCase.Length > 0
+                ? camelCase[0].ToString().ToLower(CultureInfo.InvariantCulture) + camelCase.Substring(1)
                 : camelCase;
         }
     }
