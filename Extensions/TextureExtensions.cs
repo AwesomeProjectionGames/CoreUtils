@@ -1,0 +1,78 @@
+﻿using UnityEngine;
+
+namespace AwesomeProjectionCoreUtils.Extensions
+{
+    public static class TextureExtensions
+    {
+        private static ComputeShader _hueShiftShader;
+
+        /// <summary>
+        /// Applies a hue shift to this Texture2D using a compute shader and returns a new modified Texture2D.
+        /// </summary>
+        /// <param name="texture">The source texture.</param>
+        /// <param name="hueDegrees">Hue shift amount in degrees [0-360].</param>
+        /// <returns>A new Texture2D with hue shifted.</returns>
+        public static Texture2D WithHueShift(this Texture2D texture, float hueDegrees)
+        {
+            if (_hueShiftShader == null)
+                _hueShiftShader = Resources.Load<ComputeShader>("HueShiftMain");
+
+            // Convert degrees to normalized value [0,1] for the shader
+            float hueShift = (hueDegrees % 360) / 360f;
+
+            int kernel = _hueShiftShader.FindKernel("HueShiftMain");
+
+            int width = texture.width;
+            int height = texture.height;
+
+            RenderTexture rt = new RenderTexture(width, height, 0)
+            {
+                enableRandomWrite = true,
+                format = RenderTextureFormat.ARGB32
+            };
+            rt.Create();
+
+            _hueShiftShader.SetTexture(kernel, "Source", texture);
+            _hueShiftShader.SetTexture(kernel, "Result", rt);
+            _hueShiftShader.SetFloat("HueShift", hueShift);
+
+            int threadGroupsX = Mathf.CeilToInt(width / 8f);
+            int threadGroupsY = Mathf.CeilToInt(height / 8f);
+            _hueShiftShader.Dispatch(kernel, threadGroupsX, threadGroupsY, 1);
+
+            // Convert RenderTexture to Texture2D
+            RenderTexture.active = rt;
+            Texture2D result = new Texture2D(width, height, TextureFormat.ARGB32, false);
+            result.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+            result.Apply();
+            RenderTexture.active = null;
+
+            rt.Release();
+            return result;
+        }
+
+        /// <summary>
+        /// Converts a Sprite to a standalone readable Texture2D.
+        /// </summary>
+        public static Texture2D ToTexture2D(this Sprite sprite)
+        {
+            if (sprite.rect.width != sprite.texture.width || sprite.rect.height != sprite.texture.height)
+            {
+                Texture2D newTex = new Texture2D((int)sprite.rect.width, (int)sprite.rect.height);
+                Color[] pixels = sprite.texture.GetPixels(
+                    (int)sprite.textureRect.x,
+                    (int)sprite.textureRect.y,
+                    (int)sprite.textureRect.width,
+                    (int)sprite.textureRect.height
+                );
+                newTex.SetPixels(pixels);
+                newTex.Apply();
+                return newTex;
+            }
+            else
+            {
+                return sprite.texture;
+            }
+        }
+    }
+}

@@ -1,0 +1,52 @@
+#pragma kernel HueShiftMain
+
+RWTexture2D<float4> Result;
+Texture2D<float4> Source;
+float HueShift;
+
+[numthreads(8,8,1)]
+void HueShiftMain (uint3 id : SV_DispatchThreadID)
+{
+    float4 color = Source[id.xy];
+    
+    // Convert RGB to HSV
+    float cmax = max(color.r, max(color.g, color.b));
+    float cmin = min(color.r, min(color.g, color.b));
+    float delta = cmax - cmin;
+
+    float h = 0;
+    if (delta > 0) {
+        if (cmax == color.r)
+            h = fmod(((color.g - color.b) / delta), 6);
+        else if (cmax == color.g)
+            h = ((color.b - color.r) / delta) + 2;
+        else
+            h = ((color.r - color.g) / delta) + 4;
+
+        h /= 6.0;
+        if (h < 0) h += 1.0;
+    }
+
+    float s = (cmax == 0) ? 0 : delta / cmax;
+    float v = cmax;
+
+    // Apply hue shift
+    h = fmod(h + HueShift, 1.0);
+    if (h < 0) h += 1.0;
+
+    // Convert HSV back to RGB
+    float c = v * s;
+    float x = c * (1 - abs(fmod(h * 6, 2) - 1));
+    float m = v - c;
+
+    float3 rgb;
+
+    if (h < 1.0/6.0) rgb = float3(c, x, 0);
+    else if (h < 2.0/6.0) rgb = float3(x, c, 0);
+    else if (h < 3.0/6.0) rgb = float3(0, c, x);
+    else if (h < 4.0/6.0) rgb = float3(0, x, c);
+    else if (h < 5.0/6.0) rgb = float3(x, 0, c);
+    else rgb = float3(c, 0, x);
+
+    Result[id.xy] = float4(rgb + m, color.a);
+}
