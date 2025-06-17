@@ -10,12 +10,14 @@ namespace AwesomeProjectionCoreUtils.Extensions
         /// Renders a visual gameobject into a Texture2D using a temporary camera and isolated setup.
         /// </summary>
         /// <param name="obj">The object to render.</param>
+        /// <param name="cameraPrefab">Prefab of the camera to use for rendering.</param>
         /// <param name="fov">Field of view for the rendering camera.</param>
         /// <param name="resolution">Resolution (width and height) of the output texture.</param>
         /// <param name="backgroundColor">Background color (alpha supported). Defaults to transparent.</param>
         /// <param name="cameraOffset">Optional offset from the object's bounds center. Defaults to auto distance based on FOV.</param>
         public static Texture2D RenderToTexture(
             this GameObject obj,
+            GameObject cameraPrefab,
             Vector3 cameraOffset,
             float fov = 30f,
             int resolution = 512,
@@ -33,9 +35,14 @@ namespace AwesomeProjectionCoreUtils.Extensions
             float distance = CalculateCameraDistance(bounds, fov);
 
             // Setup camera
-            GameObject camObj = new GameObject("RenderCamera") { hideFlags = HideFlags.HideAndDontSave };
-            Camera cam = camObj.AddComponent<Camera>();
-            cam.clearFlags = backgroundColor != null ? CameraClearFlags.Color : CameraClearFlags.Depth;
+            GameObject camObj = Object.Instantiate(cameraPrefab, bounds.center + cameraOffset, Quaternion.identity);
+            camObj.hideFlags = HideFlags.HideAndDontSave;
+            Camera cam = camObj.GetComponent<Camera>();
+            if (cam == null)
+            {
+                Debug.LogWarning("Camera prefab does not have a Camera component. Adding one.");
+                cam = camObj.AddComponent<Camera>();
+            }
             cam.backgroundColor = backgroundColor ?? new Color(0, 0, 0, 0);
             cam.orthographic = false;
             cam.fieldOfView = fov;
@@ -59,9 +66,6 @@ namespace AwesomeProjectionCoreUtils.Extensions
             Texture2D output = new Texture2D(resolution, resolution, TextureFormat.ARGB32, false);
             output.ReadPixels(new Rect(0, 0, resolution, resolution), 0, 0);
             output.Apply();
-            
-            Color pixel = output.GetPixel(1, 1);
-            Debug.Log("Alpha au centre : " + pixel.a);
 
             // Cleanup
             RenderTexture.active = null;
