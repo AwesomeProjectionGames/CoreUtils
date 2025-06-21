@@ -5,19 +5,29 @@ namespace AwesomeProjectionCoreUtils.Extensions
     public static class TextureExtensions
     {
         private static ComputeShader _hueShiftShader;
-
+        
         /// <summary>
-        /// Applies a hue shift to this Texture2D using a compute shader and returns a new modified Texture2D.
+        /// Applies HSV (Hue, Saturation, Value) adjustments to a Texture2D using a compute shader and returns a new modified texture.
         /// </summary>
-        /// <param name="texture">The source texture.</param>
-        /// <param name="hueDegrees">Hue shift amount in degrees [0-360].</param>
-        /// <returns>A new Texture2D with hue shifted.</returns>
-        public static Texture2D WithHueShift(this Texture2D texture, float hueDegrees)
+        /// <param name="texture">The source <see cref="Texture2D"/> to be modified.</param>
+        /// <param name="hueDegrees">Hue shift in degrees. The value is wrapped within [0, 360].</param>
+        /// <param name="saturationScale">
+        /// A multiplier for saturation. 
+        /// Values &gt; 1 increase saturation, values between 0 and 1 decrease it, and 1 leaves it unchanged.
+        /// </param>
+        /// <param name="valueScale">
+        /// A multiplier for brightness (value). 
+        /// Values &gt; 1 increase brightness, values between 0 and 1 darken it, and 1 leaves it unchanged.
+        /// </param>
+        /// <returns>A new <see cref="Texture2D"/> with the HSV adjustments applied.</returns>
+        /// <remarks>
+        /// The operation is GPU-accelerated using a compute shader. The returned texture is newly created and does not modify the original.
+        /// </remarks>
+        public static Texture2D WithHSVAdjust(this Texture2D texture, float hueDegrees, float saturationScale = 1f, float valueScale = 1f)
         {
             if (_hueShiftShader == null)
                 _hueShiftShader = Resources.Load<ComputeShader>("HueShiftMain");
 
-            // Convert degrees to normalized value [0,1] for the shader
             float hueShift = (hueDegrees % 360) / 360f;
 
             int kernel = _hueShiftShader.FindKernel("HueShiftMain");
@@ -35,12 +45,13 @@ namespace AwesomeProjectionCoreUtils.Extensions
             _hueShiftShader.SetTexture(kernel, "Source", texture);
             _hueShiftShader.SetTexture(kernel, "Result", rt);
             _hueShiftShader.SetFloat("HueShift", hueShift);
+            _hueShiftShader.SetFloat("SaturationScale", saturationScale);
+            _hueShiftShader.SetFloat("ValueScale", valueScale);
 
             int threadGroupsX = Mathf.CeilToInt(width / 8f);
             int threadGroupsY = Mathf.CeilToInt(height / 8f);
             _hueShiftShader.Dispatch(kernel, threadGroupsX, threadGroupsY, 1);
 
-            // Convert RenderTexture to Texture2D
             RenderTexture.active = rt;
             Texture2D result = new Texture2D(width, height, TextureFormat.ARGB32, false);
             result.ReadPixels(new Rect(0, 0, width, height), 0, 0);
@@ -50,6 +61,7 @@ namespace AwesomeProjectionCoreUtils.Extensions
             rt.Release();
             return result;
         }
+
 
         /// <summary>
         /// Converts a Sprite to a standalone readable Texture2D.
