@@ -7,6 +7,18 @@ namespace AwesomeProjectionCoreUtils.Extensions
         private static ComputeShader _hueShiftShader;
         
         /// <summary>
+        /// Applies a hue shift to this Texture2D using a compute shader and returns a new modified Texture2D.
+        /// </summary>
+        /// <param name="texture">The source texture.</param>
+        /// <param name="hueDegrees">Hue shift amount in degrees [0-360].</param>
+        /// <returns>A new Texture2D with hue shifted.</returns>
+        public static Texture2D WithHueShift(this Texture2D texture, float hueDegrees)
+        {
+            // Redirect to the full HSV method with neutral saturation and brightness scaling
+            return texture.WithHSVAdjust(hueDegrees, 1f, 1f);
+        }
+        
+        /// <summary>
         /// Applies HSV (Hue, Saturation, Value) adjustments to a Texture2D using a compute shader and returns a new modified texture.
         /// </summary>
         /// <param name="texture">The source <see cref="Texture2D"/> to be modified.</param>
