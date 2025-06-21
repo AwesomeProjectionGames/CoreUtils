@@ -5,7 +5,6 @@ namespace AwesomeProjectionCoreUtils.Extensions
     public static class TextureExtensions
     {
         private static ComputeShader _hueShiftShader;
-        
         /// <summary>
         /// Applies a hue shift to this Texture2D using a compute shader and returns a new modified Texture2D.
         /// </summary>
@@ -14,12 +13,12 @@ namespace AwesomeProjectionCoreUtils.Extensions
         /// <returns>A new Texture2D with hue shifted.</returns>
         public static Texture2D WithHueShift(this Texture2D texture, float hueDegrees)
         {
-            // Redirect to the full HSV method with neutral saturation and brightness scaling
-            return texture.WithHSVAdjust(hueDegrees, 1f, 1f);
+            // Redirect to the full HSL method with neutral saturation and luminance scaling
+            return texture.WithHSLAdjust(hueDegrees, 1f, 1f);
         }
-        
+
         /// <summary>
-        /// Applies HSV (Hue, Saturation, Value) adjustments to a Texture2D using a compute shader and returns a new modified texture.
+        /// Applies HSL (Hue, Saturation, Lightness) adjustments to a Texture2D using a compute shader and returns a new modified texture.
         /// </summary>
         /// <param name="texture">The source <see cref="Texture2D"/> to be modified.</param>
         /// <param name="hueDegrees">Hue shift in degrees. The value is wrapped within [0, 360].</param>
@@ -27,20 +26,20 @@ namespace AwesomeProjectionCoreUtils.Extensions
         /// A multiplier for saturation. 
         /// Values &gt; 1 increase saturation, values between 0 and 1 decrease it, and 1 leaves it unchanged.
         /// </param>
-        /// <param name="valueScale">
-        /// A multiplier for brightness (value). 
+        /// <param name="luminanceScale">
+        /// A multiplier for lightness. 
         /// Values &gt; 1 increase brightness, values between 0 and 1 darken it, and 1 leaves it unchanged.
         /// </param>
-        /// <returns>A new <see cref="Texture2D"/> with the HSV adjustments applied.</returns>
+        /// <returns>A new <see cref="Texture2D"/> with the HSL adjustments applied.</returns>
         /// <remarks>
         /// The operation is GPU-accelerated using a compute shader. The returned texture is newly created and does not modify the original.
         /// </remarks>
-        public static Texture2D WithHSVAdjust(this Texture2D texture, float hueDegrees, float saturationScale = 1f, float valueScale = 1f)
+        public static Texture2D WithHSLAdjust(this Texture2D texture, float hueDegrees, float saturationScale = 1f, float luminanceScale = 1f)
         {
             if (_hueShiftShader == null)
                 _hueShiftShader = Resources.Load<ComputeShader>("HueShiftMain");
 
-            float hueShift = (hueDegrees % 360) / 360f;
+            float hueShift = (hueDegrees % 360f) / 360f;
 
             int kernel = _hueShiftShader.FindKernel("HueShiftMain");
 
@@ -58,7 +57,7 @@ namespace AwesomeProjectionCoreUtils.Extensions
             _hueShiftShader.SetTexture(kernel, "Result", rt);
             _hueShiftShader.SetFloat("HueShift", hueShift);
             _hueShiftShader.SetFloat("SaturationScale", saturationScale);
-            _hueShiftShader.SetFloat("ValueScale", valueScale);
+            _hueShiftShader.SetFloat("LuminanceScale", luminanceScale); // <- still called ValueScale in shader for compatibility
 
             int threadGroupsX = Mathf.CeilToInt(width / 8f);
             int threadGroupsY = Mathf.CeilToInt(height / 8f);
