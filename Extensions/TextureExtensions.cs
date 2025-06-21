@@ -74,5 +74,17 @@ namespace AwesomeProjectionCoreUtils.Extensions
                 return sprite.texture;
             }
         }
+        
+        /// <summary>
+        /// Converts a Texture2D to a Sprite with the specified pivot and pixels per unit.
+        /// </summary>
+        /// <param name="texture">The Texture2D to convert.</param>
+        /// <param name="pivot">The pivot point for the sprite. 0,0 is bottom-left, 0.5,0.5 is center, 1,1 is top-right. By default, it is set to the center (0.5, 0.5).</param>
+        /// <param name="pixelsPerUnit"></param>
+        /// <returns></returns>
+        public static Sprite ToSprite(this Texture2D texture, Vector2? pivot = null, float pixelsPerUnit = 100f)
+        {
+            return Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), pivot ?? new Vector2(0.5f, 0.5f), pixelsPerUnit);
+        }
     }
 }
