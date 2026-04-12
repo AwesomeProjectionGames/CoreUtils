@@ -96,5 +96,94 @@ namespace AwesomeProjectionCoreUtils.Extensions
             float distance = radius / Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad);
             return distance;
         }
+
+        /// <summary>
+        /// Clones the MeshRenderers (and optionally Colliders) from this GameObject, 
+        /// returning a new GameObject representing the cloned visual hierarchy.
+        /// </summary>
+        public static GameObject CloneVisual(
+            this GameObject sourceObj,
+            bool withCollider = false,
+            Vector3? localPosition = null,
+            Quaternion? localRotation = null,
+            Transform? parent = null)
+        {
+            Transform sourceTransform = sourceObj.transform;
+            GameObject clonedObj = new GameObject("Ghost_" + sourceTransform.name);
+            
+            if (parent != null)
+            {
+                clonedObj.transform.SetParent(parent, false);
+            }
+            
+            clonedObj.transform.localPosition = localPosition ?? Vector3.zero;
+            clonedObj.transform.localRotation = localRotation ?? Quaternion.identity;
+            clonedObj.transform.localScale = sourceTransform.localScale;
+
+            var sourceRenderers = sourceTransform.GetComponentsInChildren<MeshRenderer>();
+            foreach (var sourceRend in sourceRenderers)
+            {
+                var sourceFilter = sourceRend.GetComponent<MeshFilter>();
+                if (sourceFilter == null) continue;
+
+                var dummy = new GameObject(sourceRend.name);
+                dummy.transform.SetParent(clonedObj.transform, false);
+                
+                // Position and rotation into relative space
+                dummy.transform.localPosition = sourceTransform.InverseTransformPoint(sourceRend.transform.position);
+                dummy.transform.localRotation = Quaternion.Inverse(sourceTransform.rotation) * sourceRend.transform.rotation;
+                
+                // Approximate relative scale
+                Vector3 relativeScale = new Vector3(
+                    sourceRend.transform.lossyScale.x / Mathf.Max(Mathf.Abs(sourceTransform.lossyScale.x), 0.0001f),
+                    sourceRend.transform.lossyScale.y / Mathf.Max(Mathf.Abs(sourceTransform.lossyScale.y), 0.0001f),
+                    sourceRend.transform.lossyScale.z / Mathf.Max(Mathf.Abs(sourceTransform.lossyScale.z), 0.0001f)
+                );
+                dummy.transform.localScale = relativeScale;
+
+                dummy.AddComponent<MeshFilter>().sharedMesh = sourceFilter.sharedMesh;
+                dummy.AddComponent<MeshRenderer>().sharedMaterials = sourceRend.sharedMaterials;
+
+                if (withCollider)
+                {
+                    var sourceCollider = sourceRend.GetComponent<Collider>();
+                    if (sourceCollider != null)
+                    {
+                        if (sourceCollider is BoxCollider box)
+                        {
+                            var c = dummy.AddComponent<BoxCollider>();
+                            c.center = box.center;
+                            c.size = box.size;
+                            c.isTrigger = box.isTrigger;
+                        }
+                        else if (sourceCollider is SphereCollider sphere)
+                        {
+                            var c = dummy.AddComponent<SphereCollider>();
+                            c.center = sphere.center;
+                            c.radius = sphere.radius;
+                            c.isTrigger = sphere.isTrigger;
+                        }
+                        else if (sourceCollider is CapsuleCollider capsule)
+                        {
+                            var c = dummy.AddComponent<CapsuleCollider>();
+                            c.center = capsule.center;
+                            c.radius = capsule.radius;
+                            c.height = capsule.height;
+                            c.direction = capsule.direction;
+                            c.isTrigger = capsule.isTrigger;
+                        }
+                        else if (sourceCollider is MeshCollider meshCollider)
+                        {
+                            var c = dummy.AddComponent<MeshCollider>();
+                            c.sharedMesh = meshCollider.sharedMesh;
+                            c.convex = meshCollider.convex;
+                            c.isTrigger = meshCollider.isTrigger;
+                        }
+                    }
+                }
+            }
+
+            return clonedObj;
+        }
     }
 }
