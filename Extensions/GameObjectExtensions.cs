@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using UnityEngine;
 
@@ -108,6 +108,21 @@ namespace AwesomeProjectionCoreUtils.Extensions
             Quaternion? localRotation = null,
             Transform? parent = null)
         {
+            return CloneVisual(sourceObj, out _, withCollider, localPosition, localRotation, parent);
+        }
+
+        /// <summary>
+        /// Clones the MeshRenderers (and optionally Colliders) from this GameObject, 
+        /// returning a new GameObject representing the cloned visual hierarchy.
+        /// </summary>
+        public static GameObject CloneVisual(
+            this GameObject sourceObj,
+            out System.Collections.Generic.List<MeshRenderer> targetRenderers,
+            bool withCollider = false,
+            Vector3? localPosition = null,
+            Quaternion? localRotation = null,
+            Transform? parent = null)
+        {
             Transform sourceTransform = sourceObj.transform;
             GameObject clonedObj = new GameObject("Ghost_" + sourceTransform.name);
             
@@ -120,6 +135,7 @@ namespace AwesomeProjectionCoreUtils.Extensions
             clonedObj.transform.localRotation = localRotation ?? Quaternion.identity;
             clonedObj.transform.localScale = sourceTransform.localScale;
 
+            targetRenderers = new System.Collections.Generic.List<MeshRenderer>();
             var sourceRenderers = sourceTransform.GetComponentsInChildren<MeshRenderer>();
             foreach (var sourceRend in sourceRenderers)
             {
@@ -142,7 +158,9 @@ namespace AwesomeProjectionCoreUtils.Extensions
                 dummy.transform.localScale = relativeScale;
 
                 dummy.AddComponent<MeshFilter>().sharedMesh = sourceFilter.sharedMesh;
-                dummy.AddComponent<MeshRenderer>().sharedMaterials = sourceRend.sharedMaterials;
+                var targetRenderer = dummy.AddComponent<MeshRenderer>();
+                targetRenderer.sharedMaterials = sourceRend.sharedMaterials;
+                targetRenderers.Add(targetRenderer);
 
                 if (withCollider)
                 {
