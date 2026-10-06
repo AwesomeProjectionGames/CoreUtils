@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 
 namespace AwesomeProjectionCoreUtils.Extensions
@@ -51,6 +51,36 @@ namespace AwesomeProjectionCoreUtils.Extensions
             return camelCase.Length > 0
                 ? camelCase[0].ToString().ToLower(CultureInfo.InvariantCulture) + camelCase.Substring(1)
                 : camelCase;
+        }
+
+        /// <summary>
+        /// Computes the canonical 32-bit FNV-1a hash of the UTF-8 encoded string.
+        /// Adheres strictly to the 32-bit FNV-1a specification:
+        /// https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+        /// Consistent across architectures, platforms, and other programming languages (Go, Rust, Python, etc.).
+        /// Zero allocations for strings up to 256 UTF-8 bytes via stackalloc Span.
+        /// </summary>
+        public static uint GetDeterministicHashCode(this string input)
+        {
+            if (input == null) return 0;
+
+            unchecked
+            {
+                uint hash = 2166136261;
+                const uint prime = 16777619;
+
+                int byteCount = System.Text.Encoding.UTF8.GetByteCount(input);
+                System.Span<byte> buffer = byteCount <= 256 ? stackalloc byte[byteCount] : new byte[byteCount];
+                System.Text.Encoding.UTF8.GetBytes(input, buffer);
+
+                for (int i = 0; i < buffer.Length; i++)
+                {
+                    hash ^= buffer[i];
+                    hash *= prime;
+                }
+
+                return hash;
+            }
         }
     }
 }
